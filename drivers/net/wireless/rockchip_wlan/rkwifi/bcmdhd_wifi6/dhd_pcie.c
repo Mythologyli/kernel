@@ -710,6 +710,8 @@ int dhdpcie_bus_attach(osl_t *osh, dhd_bus_t **bus_ptr,
 #ifdef DHD_MSI_SUPPORT
 		bus->d2h_intr_method = enable_msi && dhdpcie_chip_support_msi(bus) ?
 			PCIE_MSI : PCIE_INTX;
+		if (bus->dhd->conf->d2h_intr_method >= 0)
+			bus->d2h_intr_method = bus->dhd->conf->d2h_intr_method;
 #else
 		bus->d2h_intr_method = PCIE_INTX;
 #endif /* DHD_MSI_SUPPORT */
@@ -1062,7 +1064,8 @@ dhdpcie_bus_isr(dhd_bus_t *bus)
 			}
 		}
 
-		if (bus->d2h_intr_method == PCIE_MSI) {
+		if (bus->d2h_intr_method == PCIE_MSI &&
+				!dhd_conf_legacy_msi_chip(bus->dhd)) {
 			/* For MSI, as intstatus is cleared by firmware, no need to read */
 			goto skip_intstatus_read;
 		}
@@ -1109,12 +1112,16 @@ skip_intstatus_read:
 
 		bus->isr_intr_disable_count++;
 
+#ifdef CHIP_INTR_CONTROL
+		dhdpcie_bus_intr_disable(bus); /* Disable interrupt using IntMask!! */
+#else
 		/* For Linux, Macos etc (otherthan NDIS) instead of disabling
 		* dongle interrupt by clearing the IntMask, disable directly
 		* interrupt from the host side, so that host will not recieve
 		* any interrupts at all, even though dongle raises interrupts
 		*/
 		dhdpcie_disable_irq_nosync(bus); /* Disable interrupt!! */
+#endif /* HOST_INTR_CONTROL */
 
 		bus->intdis = TRUE;
 
@@ -2847,7 +2854,9 @@ dhdpcie_download_code_file(struct dhd_bus *bus, char *pfw_path)
 	bool store_reset;
 	char *imgbuf = NULL;
 	uint8 *memblock = NULL, *memptr = NULL;
+#ifdef CHECK_DOWNLOAD_FW
 	uint8 *memptr_tmp = NULL; // terence: check downloaded firmware is correct
+#endif
 	int offset_end = bus->ramsize;
 	uint32 file_size = 0, read_len = 0;
 
@@ -2888,13 +2897,15 @@ dhdpcie_download_code_file(struct dhd_bus *bus, char *pfw_path)
 		bcmerror = BCME_NOMEM;
 		goto err;
 	}
-	if (dhd_msg_level & DHD_TRACE_VAL) {
+#ifdef CHECK_DOWNLOAD_FW
+	if (bus->dhd->conf->fwchk) {
 		memptr_tmp = MALLOC(bus->dhd->osh, MEMBLOCK + DHD_SDALIGN);
 		if (memptr_tmp == NULL) {
 			DHD_ERROR(("%s: Failed to allocate memory %d bytes\n", __FUNCTION__, MEMBLOCK));
 			goto err;
 		}
 	}
+#endif
 	if ((uint32)(uintptr)memblock % DHD_SDALIGN) {
 		memptr += (DHD_SDALIGN - ((uint32)(uintptr)memblock % DHD_SDALIGN));
 	}
@@ -2934,7 +2945,8 @@ dhdpcie_download_code_file(struct dhd_bus *bus, char *pfw_path)
 			goto err;
 		}
 
-		if (dhd_msg_level & DHD_TRACE_VAL) {
+#ifdef CHECK_DOWNLOAD_FW
+		if (bus->dhd->conf->fwchk) {
 			bcmerror = dhdpcie_bus_membytes(bus, FALSE, offset, memptr_tmp, len);
 			if (bcmerror) {
 				DHD_ERROR(("%s: error %d on reading %d membytes at 0x%08x\n",
@@ -2947,6 +2959,7 @@ dhdpcie_download_code_file(struct dhd_bus *bus, char *pfw_path)
 			} else
 				DHD_INFO(("%s: Download, Upload and compare succeeded.\n", __FUNCTION__));
 		}
+#endif
 		offset += MEMBLOCK;
 
 		if (offset >= offset_end) {
@@ -2963,10 +2976,10 @@ dhdpcie_download_code_file(struct dhd_bus *bus, char *pfw_path)
 err:
 	if (memblock) {
 		MFREE(bus->dhd->osh, memblock, MEMBLOCK + DHD_SDALIGN);
-		if (dhd_msg_level & DHD_TRACE_VAL) {
-			if (memptr_tmp)
-				MFREE(bus->dhd->osh, memptr_tmp, MEMBLOCK + DHD_SDALIGN);
-		}
+#ifdef CHECK_DOWNLOAD_FW
+		if (memptr_tmp)
+			MFREE(bus->dhd->osh, memptr_tmp, MEMBLOCK + DHD_SDALIGN);
+#endif
 	}
 
 	if (imgbuf) {
@@ -7955,10 +7968,14 @@ dhd_bus_dpc(struct dhd_bus *bus)
 INTR_ON:
 #endif /* DHD_READ_INTSTATUS_IN_DPC */
 		bus->dpc_intr_enable_count++;
+#ifdef CHIP_INTR_CONTROL
+		dhdpcie_bus_intr_enable(bus); /* Enable back interrupt using Intmask!! */
+#else
 		/* For Linux, Macos etc (otherthan NDIS) enable back the host interrupts
 		 * which has been disabled in the dhdpcie_bus_isr()
 		 */
-		 dhdpcie_enable_irq(bus); /* Enable back interrupt!! */
+		dhdpcie_enable_irq(bus); /* Enable back interrupt!! */
+#endif /* HOST_INTR_CONTROL */
 		bus->dpc_exit_time = OSL_LOCALTIME_NS();
 	} else {
 		bus->resched_dpc_time = OSL_LOCALTIME_NS();

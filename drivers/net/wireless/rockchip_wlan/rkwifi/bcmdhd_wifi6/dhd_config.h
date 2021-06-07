@@ -13,9 +13,10 @@
 #define FW_TYPE_APSTA   1
 #define FW_TYPE_P2P     2
 #define FW_TYPE_MESH    3
-#define FW_TYPE_ES      4
-#define FW_TYPE_MFG     5
-#define FW_TYPE_MINIME  6
+#define FW_TYPE_EZMESH  4
+#define FW_TYPE_ES      5
+#define FW_TYPE_MFG     6
+#define FW_TYPE_MINIME  7
 #define FW_TYPE_G       0
 #define FW_TYPE_AG      1
 
@@ -110,7 +111,8 @@ enum in4way_flags {
 	STA_NO_SCAN_IN4WAY	= (1 << (0)),
 	STA_NO_BTC_IN4WAY	= (1 << (1)),
 	STA_WAIT_DISCONNECTED	= (1 << (2)),
-	AP_WAIT_STA_RECONNECT	= (1 << (3)),
+	STA_START_AUTH_DELAY	= (1 << (3)),
+	AP_WAIT_STA_RECONNECT	= (1 << (4)),
 };
 
 enum in_suspend_flags {
@@ -152,13 +154,17 @@ enum eapol_status {
 	EAPOL_STATUS_WPS_M8 = 11,
 	EAPOL_STATUS_WSC_DONE = 12,
 	EAPOL_STATUS_4WAY_START = 13,
-	EAPOL_STATUS_4WAY_M1 = 14,
-	EAPOL_STATUS_4WAY_M2 = 15,
-	EAPOL_STATUS_4WAY_M3 = 16,
-	EAPOL_STATUS_4WAY_M4 = 17,
-	EAPOL_STATUS_GROUPKEY_M1 = 18,
-	EAPOL_STATUS_GROUPKEY_M2 = 19,
-	EAPOL_STATUS_4WAY_DONE = 20
+	AUTH_SAE_COMMIT_M1 = 14,
+	AUTH_SAE_COMMIT_M2 = 15,
+	AUTH_SAE_CONFIRM_M3 = 16,
+	AUTH_SAE_CONFIRM_M4 = 17,
+	EAPOL_STATUS_4WAY_M1 = 18,
+	EAPOL_STATUS_4WAY_M2 = 19,
+	EAPOL_STATUS_4WAY_M3 = 20,
+	EAPOL_STATUS_4WAY_M4 = 21,
+	EAPOL_STATUS_GROUPKEY_M1 = 22,
+	EAPOL_STATUS_GROUPKEY_M2 = 23,
+	EAPOL_STATUS_4WAY_DONE = 24
 };
 
 typedef struct dhd_conf {
@@ -248,6 +254,7 @@ typedef struct dhd_conf {
 #ifdef BCMPCIE
 	int bus_deepsleep_disable;
 	int flow_ring_queue_threshold;
+	int d2h_intr_method;
 #endif
 	int dpc_cpucore;
 	int rxf_cpucore;
@@ -309,16 +316,22 @@ typedef struct dhd_conf {
 	struct osl_timespec tput_ts;
 	unsigned long net_len;
 #endif
+#ifdef TPUT_MONITOR
+	uint tput_monitor_ms;
+#endif
 #ifdef DHD_TPUT_PATCH
 	bool tput_patch;
 	int mtu;
 	bool pktsetsum;
 #endif
-#if defined(SET_XPS_CPUS)
+#ifdef SET_XPS_CPUS
 	bool xps_cpus;
 #endif
-#if defined(SET_RPS_CPUS)
+#ifdef SET_RPS_CPUS
 	bool rps_cpus;
+#endif
+#ifdef CHECK_DOWNLOAD_FW
+	bool fwchk;
 #endif
 } dhd_conf_t;
 
@@ -331,6 +344,7 @@ void dhd_conf_set_txglom_params(dhd_pub_t *dhd, bool enable);
 #endif
 #ifdef BCMPCIE
 int dhd_conf_get_otp(dhd_pub_t *dhd, si_t *sih);
+bool dhd_conf_legacy_msi_chip(dhd_pub_t *dhd);
 #endif
 void dhd_conf_set_path_params(dhd_pub_t *dhd, char *fw_path, char *nv_path);
 int dhd_conf_set_intiovar(dhd_pub_t *dhd, uint cmd, char *name, int val,

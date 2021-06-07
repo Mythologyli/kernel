@@ -2,6 +2,8 @@
 # bcmdhd
 
 MODULE_NAME := bcmdhd
+#CONFIG_BCMDHD := m
+
 CONFIG_BCMDHD_SDIO := y
 #CONFIG_BCMDHD_PCIE := y
 #CONFIG_BCMDHD_USB := y
@@ -9,13 +11,13 @@ CONFIG_BCMDHD_SDIO := y
 CONFIG_BCMDHD_OOB := y
 #CONFIG_BCMDHD_CUSB := y
 CONFIG_BCMDHD_PROPTXSTATUS := y
+CONFIG_BCMDHD_AG := y
 #CONFIG_DHD_USE_STATIC_BUF := y
 CONFIG_BCMDHD_VTS := y
 CONFIG_BCMDHD_AUTO_SELECT := y
-#CONFIG_BCMDHD_DEBUG := y
+CONFIG_BCMDHD_DEBUG := y
 #CONFIG_BCMDHD_WAPI := y
 
-CONFIG_BCMDHD_AG :=y
 CONFIG_MACH_PLATFORM := y
 #CONFIG_BCMDHD_DTS := y
 
@@ -29,8 +31,14 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Dlinux -DBCMDRIVER                 \
 	-DPOWERUP_MAX_RETRY=0 -DIFACE_HANG_FORCE_DEV_CLOSE -DWAIT_DEQUEUE     \
 	-DWL_EXT_IAPSTA -DWL_ESCAN -DCCODE_LIST                               \
 	-DENABLE_INSMOD_NO_FW_LOAD                                            \
-	-Idrivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd_wifi6 \
+	-Idrivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd_wifi6              \
 	-Idrivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd_wifi6/include
+
+DHDCFLAGS += -Wno-parentheses-equality
+DHDCFLAGS += -Wno-unused-const-variable
+DHDCFLAGS += -Wno-non-literal-null-conversion
+DHDCFLAGS += -Wno-date-time
+DHDCFLAGS += -Wframe-larger-than=2048
 
 DHDOFILES = aiutils.o siutils.o sbutils.o bcmutils.o bcmwifi_channels.o   \
 	dhd_linux.o dhd_linux_platdev.o dhd_linux_sched.o dhd_pno.o           \
@@ -39,7 +47,8 @@ DHDOFILES = aiutils.o siutils.o sbutils.o bcmutils.o bcmwifi_channels.o   \
 	dhd_debug_linux.o dhd_debug.o dhd_mschdbg.o dhd_dbg_ring.o            \
 	hnd_pktq.o hnd_pktpool.o bcmxtlv.o linux_pkt.o bcmstdlib_s.o frag.o   \
 	dhd_linux_exportfs.o dhd_linux_pktdump.o                              \
-	dhd_config.o dhd_ccode.o wl_event.o wl_android_ext.o wl_escan.o
+	dhd_config.o dhd_ccode.o wl_event.o wl_android_ext.o                  \
+	wl_iapsta.o wl_escan.o
 
 ifeq ($(BCMDHD_STATIC_IF),y)
 	DHDCFLAGS += -DWL_STATIC_IF
@@ -64,6 +73,7 @@ ifneq ($(CONFIG_CFG80211),)
 	DHDCFLAGS += -DWL_VIRTUAL_APSTA
 	DHDCFLAGS += -DPNO_SUPPORT -DEXPLICIT_DISCIF_CLEANUP
 	DHDCFLAGS += -DDHD_USE_SCAN_WAKELOCK
+	DHDCFLAGS += -DSPECIFIC_MAC_GEN_SCHEME
 	DHDCFLAGS += -DWLFBT
 #	DHDCFLAGS += -DWL_STATIC_IF
 #	DHDCFLAGS += -DWL_CLIENT_SAE
@@ -138,21 +148,32 @@ endif
 
 # For Android VTS
 ifeq ($(CONFIG_BCMDHD_VTS),y)
-DHDCFLAGS += -DDHD_NOTIFY_MAC_CHANGED
+	DHDCFLAGS += -DDHD_NOTIFY_MAC_CHANGED
 ifneq ($(CONFIG_CFG80211),)
-DHDCFLAGS += -DGSCAN_SUPPORT -DRTT_SUPPORT -DLINKSTAT_SUPPORT             \
-	-DCUSTOM_COUNTRY_CODE -DDHD_GET_VALID_CHANNELS                        \
-	-DDEBUGABILITY -DDBG_PKT_MON -DDHD_LOG_DUMP -DDHD_FW_COREDUMP         \
-	-DAPF -DNDO_CONFIG_SUPPORT -DRSSI_MONITOR_SUPPORT -DDHD_WAKE_STATUS
-DHDOFILES += dhd_rtt.o bcm_app_utils.o
+	DHDCFLAGS += -DGSCAN_SUPPORT -DRTT_SUPPORT -DLINKSTAT_SUPPORT
+	DHDCFLAGS += -DCUSTOM_COUNTRY_CODE -DDHD_GET_VALID_CHANNELS
+	DHDCFLAGS += -DDEBUGABILITY -DDBG_PKT_MON
+	DHDCFLAGS += -DDHD_LOG_DUMP -DDHD_FW_COREDUMP
+	DHDCFLAGS += -DAPF -DNDO_CONFIG_SUPPORT -DRSSI_MONITOR_SUPPORT
+	DHDCFLAGS += -DDHD_WAKE_STATUS
+	DHDOFILES += dhd_rtt.o bcm_app_utils.o
 endif
 endif
 
 # For Debug
-ifneq ($(CONFIG_BCMDHD_DEBUG),)
-DHDCFLAGS += -DDEBUGFS_CFG80211
-DHDCFLAGS += -DSHOW_LOGTRACE -DDHD_LOG_DUMP -DDHD_FW_COREDUMP             \
-	-DBCMASSERT_LOG -DSI_ERROR_ENFORCE
+ifeq ($(CONFIG_BCMDHD_DEBUG),y)
+	DHDCFLAGS += -DDHD_ARP_DUMP -DDHD_DHCP_DUMP -DDHD_ICMP_DUMP
+	DHDCFLAGS += -DDHD_DNS_DUMP -DDHD_TRX_DUMP
+	DHDCFLAGS += -DTPUT_MONITOR
+	DHDCFLAGS += -DCHECK_DOWNLOAD_FW
+#	DHDCFLAGS += -DDHD_PKTDUMP_TOFW
+endif
+
+# For Debug2
+ifeq ($(CONFIG_BCMDHD_DEBUG2),y)
+	DHDCFLAGS += -DDEBUGFS_CFG80211
+	DHDCFLAGS += -DSHOW_LOGTRACE -DDHD_LOG_DUMP -DDHD_FW_COREDUMP
+	DHDCFLAGS += -DBCMASSERT_LOG -DSI_ERROR_ENFORCE
 ifneq ($(CONFIG_BCMDHD_PCIE),)
 	DHDCFLAGS += -DEWP_EDL
 	DHDCFLAGS += -DDNGL_EVENT_SUPPORT
@@ -174,20 +195,20 @@ endif
 	DHDCFLAGS :=$(filter-out -DWL_STATIC_IF,$(DHDCFLAGS))
 endif
 
-ifeq ($(CONFIG_WL_EASYMESH),y)
+ifeq ($(CONFIG_BCMDHD_EASYMESH),y)
 	DHDCFLAGS :=$(filter-out -DDHD_FW_COREDUMP,$(DHDCFLAGS))
 	DHDCFLAGS :=$(filter-out -DDHD_LOG_DUMP,$(DHDCFLAGS))
 	DHDCFLAGS += -DWLEASYMESH -DWL_STATIC_IF -DWLDWDS -DFOURADDR_AUTO_BRG
 endif
 
 #CSI_SUPPORT
-ifneq ($(CONFIG_CSI_SUPPORT),)
+ifeq ($(CONFIG_CSI_SUPPORT),y)
 	DHDCFLAGS += -DCSI_SUPPORT
 	DHDOFILES += dhd_csi.o
 endif
 
 # For TPUT_IMPROVE
-ifneq ($(CONFIG_BCMDHD_TPUT),)
+ifeq ($(CONFIG_BCMDHD_TPUT),y)
 	DHDCFLAGS += -DDHD_TPUT_PATCH
 ifneq ($(CONFIG_BCMDHD_SDIO),)
 	DHDCFLAGS += -DDYNAMIC_MAX_HDR_READ
@@ -201,40 +222,35 @@ endif
 endif
 
 # For Zero configure
-ifneq ($(CONFIG_BCMDHD_ZEROCONFIG),)
+ifeq ($(CONFIG_BCMDHD_ZEROCONFIG),y)
 	DHDCFLAGS += -DWL_EXT_GENL -DSENDPROB
 	DHDOFILES += wl_ext_genl.o
 endif
 
 # For WAPI
-ifneq ($(CONFIG_BCMDHD_WAPI),)
+ifeq ($(CONFIG_BCMDHD_WAPI),y)
 	DHDCFLAGS += -DBCMWAPI_WPI -DBCMWAPI_WAI
 endif
 
 # For Module auto-selection
-ifneq ($(CONFIG_BCMDHD_AUTO_SELECT),)
-ifneq ($(CONFIG_BCMDHD_SDIO),)
-	DHDCFLAGS += -DGET_OTP_MODULE_NAME -DUPDATE_MODULE_NAME -DCOMPAT_OLD_MODULE
-endif
-ifneq ($(CONFIG_BCMDHD_PCIE),)
+ifeq ($(CONFIG_BCMDHD_AUTO_SELECT),y)
 	DHDCFLAGS += -DUPDATE_MODULE_NAME
+ifneq ($(CONFIG_BCMDHD_SDIO),)
+	DHDCFLAGS += -DGET_OTP_MODULE_NAME -DCOMPAT_OLD_MODULE
 endif
 endif
 
-ifeq ($(CONFIG_BCMDHD),m)
+ifeq ($(CONFIG_AP6XXX_WIFI6),m)
 	DHDCFLAGS += -DBCMDHD_MODULAR
 endif
-
-obj-$(CONFIG_AP6XXX_WIFI6) += $(MODULE_NAME).o
-$(MODULE_NAME)-objs += $(DHDOFILES)
 
 ifeq ($(CONFIG_MACH_PLATFORM),y)
 	DHDOFILES += dhd_gpio.o
 ifeq ($(CONFIG_BCMDHD_DTS),y)
-	DHDCFLAGS += -DCONFIG_DTS
-else
-	DHDCFLAGS += -DCUSTOMER_HW -DDHD_OF_SUPPORT
+	DHDCFLAGS += -DBCMDHD_DTS
 endif
+	DHDCFLAGS += -DCUSTOMER_HW -DDHD_OF_SUPPORT
+	DHDCFLAGS += -DENABLE_INSMOD_NO_POWER_OFF
 endif
 
 ifeq ($(CONFIG_BCMDHD_AG),y)
@@ -248,11 +264,34 @@ ifeq ($(CONFIG_DHD_USE_STATIC_BUF),y)
 	DHDCFLAGS += -DDHD_USE_STATIC_MEMDUMP
 endif
 
+ARCH ?= arm64
+BCMDHD_ROOT = $(src)
+#$(warning "BCMDHD_ROOT=$(BCMDHD_ROOT)")
 EXTRA_CFLAGS = $(DHDCFLAGS)
-ifeq ($(CONFIG_BCMDHD),m)
+EXTRA_CFLAGS += -DDHD_COMPILED=\"$(BCMDHD_ROOT)\"
+EXTRA_CFLAGS += -I$(BCMDHD_ROOT)/include/ -I$(BCMDHD_ROOT)/
+ifeq ($(CONFIG_AP6XXX_WIFI6),m)
 EXTRA_LDFLAGS += --strip-debug
 endif
 
-EXTRA_CFLAGS += -Wno-parentheses-equality
-EXTRA_CFLAGS += -Wno-unused-const-variable
-EXTRA_CFLAGS += -Wno-non-literal-null-conversion
+obj-$(CONFIG_AP6XXX_WIFI6) += $(MODULE_NAME).o
+$(MODULE_NAME)-objs += $(DHDOFILES)
+ccflags-y := $(EXTRA_CFLAGS)
+
+all: bcmdhd_pcie bcmdhd_sdio bcmdhd_usb
+
+bcmdhd_pcie:
+	$(warning "building BCMDHD_PCIE..........")
+	$(MAKE) -C $(LINUXDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules CONFIG_AP6XXX_WIFI6=m CONFIG_BCMDHD_PCIE=y
+
+bcmdhd_sdio:
+	$(warning "building BCMDHD_SDIO..........")
+	$(MAKE) -C $(LINUXDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules CONFIG_AP6XXX_WIFI6=m CONFIG_BCMDHD_SDIO=y
+
+bcmdhd_usb:
+	$(warning "building BCMDHD_USB..........")
+	$(MAKE) -C $(LINUXDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules CONFIG_AP6XXX_WIFI6=m CONFIG_BCMDHD_USB=y
+
+clean:
+	rm -rf *.o *.ko *.mod.c *~ .*.cmd *.o.cmd .*.o.cmd *.mod \
+	Module.symvers modules.order .tmp_versions modules.builtin

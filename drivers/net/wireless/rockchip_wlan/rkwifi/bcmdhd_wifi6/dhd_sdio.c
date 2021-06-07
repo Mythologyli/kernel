@@ -67,6 +67,9 @@
 #include <dhdioctl.h>
 #include <sdiovar.h>
 #include <dhd_config.h>
+#ifdef DHD_PKTDUMP_TOFW
+#include <dhd_linux_pktdump.h>
+#endif
 
 #ifdef PROP_TXSTATUS
 #include <dhd_wlfc.h>
@@ -82,6 +85,10 @@
 #if defined(DEBUGGER) || defined(DHD_DSCOPE)
 #include <debugger.h>
 #endif /* DEBUGGER || DHD_DSCOPE */
+
+#include <linux/mmc/sdio_func.h>
+#include <linux/mmc/host.h>
+#include "bcmsdh_sdmmc.h"
 
 bool dhd_mp_halting(dhd_pub_t *dhdp);
 extern void bcmsdh_waitfor_iodrain(void *sdh);
@@ -1111,6 +1118,12 @@ dhdsdio_clk_kso_enab(dhd_bus_t *bus, bool on)
 	uint8 wr_val = 0, rd_val, cmp_val, bmask;
 	int err = 0;
 	int try_cnt = 0;
+	struct mmc_host *host;
+	struct sdioh_info *sd = (struct sdioh_info *)(bus->sdh->sdioh);
+	struct sdio_func *func = sd->func[SDIO_FUNC_0];
+
+	host = func->card->host;
+	mmc_retune_disable(host);
 
 	KSO_DBG(("%s> op:%s\n", __FUNCTION__, (on ? "KSO_SET" : "KSO_CLR")));
 
@@ -1123,6 +1136,7 @@ dhdsdio_clk_kso_enab(dhd_bus_t *bus, bool on)
 	 * after clearing KSO bit, to avoid polling of KSO bit.
 	 */
 	if ((!on) && (bus->sih->chip == BCM43012_CHIP_ID)) {
+		mmc_retune_enable(host);
 		return err;
 	}
 
@@ -1161,6 +1175,8 @@ dhdsdio_clk_kso_enab(dhd_bus_t *bus, bool on)
 		DHD_ERROR(("%s> op:%s, ERROR: try_cnt:%d, rd_val:%x, ERR:%x \n",
 			__FUNCTION__, (on ? "KSO_SET" : "KSO_CLR"), try_cnt, rd_val, err));
 	}
+
+	mmc_retune_enable(host);
 
 	return err;
 }
@@ -2663,7 +2679,7 @@ dhdsdio_sendfromq(dhd_bus_t *bus, uint maxframes)
 	osl_t *osh;
 	dhd_pub_t *dhd = bus->dhd;
 	sdpcmd_regs_t *regs = bus->regs;
-#ifdef DHD_LOSSLESS_ROAMING
+#if defined(DHD_LOSSLESS_ROAMING) || defined(DHD_PKTDUMP_TOFW)
 	uint8 *pktdata;
 	struct ether_header *eh;
 #ifdef BDC
@@ -2711,7 +2727,7 @@ dhdsdio_sendfromq(dhd_bus_t *bus, uint maxframes)
 				ASSERT(0);
 				break;
 			}
-#ifdef DHD_LOSSLESS_ROAMING
+#if defined(DHD_LOSSLESS_ROAMING) || defined(DHD_PKTDUMP_TOFW)
 			pktdata = (uint8 *)PKTDATA(osh, pkts[i]);
 #ifdef BDC
 			/* Skip BDC header */
@@ -2720,6 +2736,7 @@ dhdsdio_sendfromq(dhd_bus_t *bus, uint maxframes)
 			pktdata += BDC_HEADER_LEN + (data_offset << 2);
 #endif // endif
 			eh = (struct ether_header *)pktdata;
+#ifdef DHD_LOSSLESS_ROAMING
 			if (eh->ether_type == hton16(ETHER_TYPE_802_1X)) {
 				uint8 prio = (uint8)PKTPRIO(pkts[i]);
 
@@ -2734,6 +2751,11 @@ dhdsdio_sendfromq(dhd_bus_t *bus, uint maxframes)
 				}
 			}
 #endif /* DHD_LOSSLESS_ROAMING */
+#ifdef DHD_PKTDUMP_TOFW
+			dhd_dump_pkt(bus->dhd, BDC_GET_IF_IDX(bdc_header), pktdata,
+				(uint32)PKTLEN(bus->dhd->osh, pkts[i]), TRUE, NULL, NULL);
+#endif
+#endif /* DHD_LOSSLESS_ROAMING || DHD_8021X_DUMP */
 			if (!bus->dhd->conf->orphan_move)
 				PKTORPHAN(pkts[i], bus->dhd->conf->tsq);
 			datalen += PKTLEN(osh, pkts[i]);
@@ -5389,6 +5411,10 @@ dhd_bus_init(dhd_pub_t *dhdp, bool enforce_mutex)
 #ifndef BCMSPI
 
 	else {
+		if (dhdp->conf->chip == BCM4354_CHIP_ID) {
+			ret = -1;
+			goto exit;
+		}
 		/* Disable F2 again */
 		enable = SDIO_FUNC_ENABLE_1;
 		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_0, SDIOD_CCCR_IOEN, enable, NULL);
@@ -9208,7 +9234,9 @@ dhdsdio_download_code_file(struct dhd_bus *bus, char *pfw_path)
 	int len;
 	void *image = NULL;
 	uint8 *memblock = NULL, *memptr;
+#ifdef CHECK_DOWNLOAD_FW
 	uint8 *memptr_tmp = NULL; // terence: check downloaded firmware is correct
+#endif
 	uint memblock_size = MEMBLOCK;
 #ifdef DHD_DEBUG_DOWNLOADTIME
 	unsigned long initial_jiffies = 0;
@@ -9232,13 +9260,15 @@ dhdsdio_download_code_file(struct dhd_bus *bus, char *pfw_path)
 			memblock_size));
 		goto err;
 	}
-	if (dhd_msg_level & DHD_TRACE_VAL) {
+#ifdef CHECK_DOWNLOAD_FW
+	if (bus->dhd->conf->fwchk) {
 		memptr_tmp = MALLOC(bus->dhd->osh, MEMBLOCK + DHD_SDALIGN);
 		if (memptr_tmp == NULL) {
 			DHD_ERROR(("%s: Failed to allocate memory %d bytes\n", __FUNCTION__, MEMBLOCK));
 			goto err;
 		}
 	}
+#endif
 	if ((uint32)(uintptr)memblock % DHD_SDALIGN)
 		memptr += (DHD_SDALIGN - ((uint32)(uintptr)memblock % DHD_SDALIGN));
 
@@ -9279,7 +9309,8 @@ dhdsdio_download_code_file(struct dhd_bus *bus, char *pfw_path)
 			goto err;
 		}
 
-		if (dhd_msg_level & DHD_TRACE_VAL) {
+#ifdef CHECK_DOWNLOAD_FW
+		if (bus->dhd->conf->fwchk) {
 			bcmerror = dhdsdio_membytes(bus, FALSE, offset, memptr_tmp, len);
 			if (bcmerror) {
 				DHD_ERROR(("%s: error %d on reading %d membytes at 0x%08x\n",
@@ -9292,6 +9323,7 @@ dhdsdio_download_code_file(struct dhd_bus *bus, char *pfw_path)
 			} else
 				DHD_INFO(("%s: Download, Upload and compare succeeded.\n", __FUNCTION__));
 		}
+#endif
 
 		offset += memblock_size;
 #ifdef DHD_DEBUG_DOWNLOADTIME
@@ -9307,10 +9339,12 @@ dhdsdio_download_code_file(struct dhd_bus *bus, char *pfw_path)
 err:
 	if (memblock)
 		MFREE(bus->dhd->osh, memblock, memblock_size + DHD_SDALIGN);
-	if (dhd_msg_level & DHD_TRACE_VAL) {
+#ifdef CHECK_DOWNLOAD_FW
+	if (bus->dhd->conf->fwchk) {
 		if (memptr_tmp)
 			MFREE(bus->dhd->osh, memptr_tmp, MEMBLOCK + DHD_SDALIGN);
 	}
+#endif
 
 	if (image)
 		dhd_os_close_image1(bus->dhd, image);

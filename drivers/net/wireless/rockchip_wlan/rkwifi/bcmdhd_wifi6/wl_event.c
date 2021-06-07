@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
-#if defined(WL_EXT_IAPSTA) || defined(USE_IW)
-#include <bcmendian.h>
 #include <wl_android.h>
+#ifdef WL_EVENT
+#include <bcmendian.h>
 #include <dhd_config.h>
 
 #define EVENT_ERROR(name, arg1, args...) \

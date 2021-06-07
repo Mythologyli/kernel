@@ -6127,7 +6127,9 @@ int wl_android_init(void)
 {
 	int ret = 0;
 
-#if defined(ENABLE_INSMOD_NO_FW_LOAD) || defined(BUS_POWER_RESTORE)
+#ifdef ENABLE_INSMOD_NO_POWER_OFF
+	dhd_download_fw_on_driverload = TRUE;
+#elif defined(ENABLE_INSMOD_NO_FW_LOAD) || defined(BUS_POWER_RESTORE)
 	dhd_download_fw_on_driverload = FALSE;
 #endif /* ENABLE_INSMOD_NO_FW_LOAD */
 	if (!iface_name[0]) {
@@ -6547,8 +6549,8 @@ wl_cfg80211_static_if_open(struct net_device *net)
 	u16 iftype = net->ieee80211_ptr ? net->ieee80211_ptr->iftype : 0;
 	u16 wl_iftype, wl_mode;
 #ifdef CUSTOM_MULTI_MAC
-	char hw_ether[62];
 	dhd_pub_t *dhd = dhd_get_pub(net);
+	char hw_ether[62];
 #endif
 
 	WL_INFORM_MEM(("[STATIC_IF] dev_open ndev %p and wdev %p\n", net, net->ieee80211_ptr));
