@@ -19,7 +19,7 @@ model_arm64=(
 	"TB-RK3568X0     TX0356 arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3568Xs0    TXs356 arm64 RK3568    0xff660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3568X1-C   TX031C arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
-	"TB-RK3568X0-C   TX031C arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
+	"TB-RK3568X0-C   TX030C arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3399ProD   TD0331 arm64 RK3399Pro 0xff1a0000 rk3399pro-toybrick-prod-linux    0     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3399ProDs  TDs331 arm64 RK3399pro 0xff1a0000 rk3399pro-toybrick-prod-linux    0     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3399ProP   TP0331 arm64 RK3399Pro 0xff1a0000 rk3399pro-toybrick-prop-linux    0     Image.rockchip  rockchip_linux_defconfig"
@@ -50,7 +50,7 @@ MAX_BOARDID=32
 
 function help()
 {
-	echo "Usage: ./make-linux.sh {arm|arm64}"
+	echo "Usage: ./make-linux.sh {arm|arm64|ubifs}"
 	echo "e.g."
 	echo "  ./make-linux.sh arm"
 	echo "  ./make-linux.sh arm64"
@@ -214,6 +214,13 @@ case $1 in
 			make_extlinux_conf $i ext4
 		done
 		make_boot_linux ext4
+		;;
+	ubifs)
+		for i in "${model_ubifs[@]}"; do
+			make_kernel_image $i
+			make_extlinux_conf $i ubifs
+		done
+		make_boot_linux ubifs
 		;;
 	*)
 		if [ $# -eq 1 ]; then
