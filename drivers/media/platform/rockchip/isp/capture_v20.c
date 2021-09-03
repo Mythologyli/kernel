@@ -576,6 +576,10 @@ static int rkisp_stream_config_dcrop(struct rkisp_stream *stream, bool async)
 		rkisp_disable_dcrop(stream, async);
 		v4l2_dbg(1, rkisp_debug, &dev->v4l2_dev,
 			 "stream %d crop disabled\n", stream->id);
+		if (RKMODULE_EXTEND_LINE != 0) {
+			rkisp_write(dev, stream->config->dual_crop.h_size, src_w, false);
+			rkisp_write(dev, stream->config->dual_crop.v_size, src_h, false);
+		}
 		return 0;
 	}
 
@@ -1812,10 +1816,6 @@ static void rkisp_stop_streaming(struct vb2_queue *queue)
 	rkisp_destroy_dummy_buf(stream);
 	atomic_dec(&dev->cap_dev.refcnt);
 	stream->start_stream = false;
-	if (stream->id == RKISP_STREAM_SP && stream->out_isp_fmt.fmt_type == FMT_FBCGAIN) {
-		stream->out_isp_fmt.fmt_type = FMT_YUV;
-		stream->out_isp_fmt.fourcc = V4L2_PIX_FMT_NV12;
-	}
 }
 
 static int rkisp_stream_start(struct rkisp_stream *stream)
