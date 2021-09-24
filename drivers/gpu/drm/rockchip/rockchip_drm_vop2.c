@@ -2527,27 +2527,11 @@ static void vop2_layer_map_initial(struct vop2 *vop2, uint32_t current_vp_id)
 	uint32_t win_map, vp_id;
 	uint16_t port_mux_cfg = 0;
 	uint16_t port_mux;
-	uint32_t active_vp_mask = 0;
-	uint32_t standby;
 	uint32_t shift;
 	int i, j;
 
 	layer_map = vop2_readl(vop2, layer->regs->layer_sel.offset);
 	win_map = vop2_readl(vop2, vp->regs->port_mux.offset);
-
-	active_vp_mask |= BIT(current_vp_id);
-	/*
-	 * lookup if there are some vps activated
-	 * by bootloader(et: show boot logo)
-	 */
-	for (i = 0; i < vop2->data->nr_vps; i++) {
-		vp = &vop2->vps[i];
-		standby = vop2_readl(vop2, vp->regs->standby.offset);
-		shift = vp->regs->standby.shift;
-		standby = (standby >> shift) & 0x1;
-		if (!standby)
-			active_vp_mask |= BIT(i);
-	}
 
 	for (i = 0; i < vop2->data->nr_vps; i++) {
 		vp = &vop2->vps[i];
@@ -2745,22 +2729,6 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
 
 		crtc->state->event = NULL;
 	}
-}
-
-static int vop2_plane_prepare_fb(struct drm_plane *plane,
-				 struct drm_plane_state *new_state)
-{
-	if (plane->state->fb)
-		drm_framebuffer_get(plane->state->fb);
-
-	return 0;
-}
-
-static void vop2_plane_cleanup_fb(struct drm_plane *plane,
-				  struct drm_plane_state *old_state)
-{
-	if (old_state->fb)
-		drm_framebuffer_put(old_state->fb);
 }
 
 static int vop2_plane_atomic_check(struct drm_plane *plane, struct drm_plane_state *state)
@@ -3262,8 +3230,6 @@ static void vop2_plane_atomic_update(struct drm_plane *plane, struct drm_plane_s
 }
 
 static const struct drm_plane_helper_funcs vop2_plane_helper_funcs = {
-	.prepare_fb = vop2_plane_prepare_fb,
-	.cleanup_fb = vop2_plane_cleanup_fb,
 	.atomic_check = vop2_plane_atomic_check,
 	.atomic_update = vop2_plane_atomic_update,
 	.atomic_disable = vop2_plane_atomic_disable,

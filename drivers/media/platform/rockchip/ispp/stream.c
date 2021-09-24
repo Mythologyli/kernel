@@ -402,6 +402,20 @@ static void update_mi(struct rkispp_stream *stream)
 		 rkispp_read(dev, stream->config->reg.cur_uv_base));
 }
 
+static void get_stream_buf(struct rkispp_stream *stream)
+{
+	unsigned long lock_flags = 0;
+
+	spin_lock_irqsave(&stream->vbq_lock, lock_flags);
+	if (!list_empty(&stream->buf_queue) && !stream->curr_buf) {
+		stream->curr_buf =
+			list_first_entry(&stream->buf_queue,
+					 struct rkispp_buffer, queue);
+		list_del(&stream->curr_buf->queue);
+	}
+	spin_unlock_irqrestore(&stream->vbq_lock, lock_flags);
+}
+
 static int rkispp_frame_end(struct rkispp_stream *stream, u32 state)
 {
 	struct rkispp_device *dev = stream->isppdev;
@@ -475,29 +489,29 @@ static int rkispp_frame_end(struct rkispp_stream *stream, u32 state)
 		stream->dbg.id = stream->curr_buf->vb.sequence;
 
 		stream->curr_buf = NULL;
-	} else if (stream->is_reg_withstream &&
-		   (fmt->wr_fmt & FMT_FBC || fmt->wr_fmt == FMT_YUV420)) {
-		u32 frame_id;
+	} else {
+		u32 frame_id = dev->ispp_sdev.frm_sync_seq;
 
-		frame_id = dev->ispp_sdev.frm_sync_seq;
-		rkispp_find_regbuf_by_id(dev, &reg_buf, dev->dev_id, frame_id);
-		if (reg_buf) {
-			rkispp_release_regbuf(dev, reg_buf);
-			v4l2_info(&dev->v4l2_dev,
-				  "%s: current frame use dummy buffer(dev_id %d, sequence %d)\n",
-				  __func__, dev->dev_id, frame_id);
+		if (stream->is_cfg) {
+			stream->dbg.frameloss++;
+			v4l2_dbg(0, rkispp_debug, &dev->v4l2_dev,
+				 "stream:%d no buf, lost frame:%d\n",
+				 stream->id, frame_id);
+		}
+
+		if (stream->is_reg_withstream &&
+		    (fmt->wr_fmt & FMT_FBC || fmt->wr_fmt == FMT_YUV420)) {
+			rkispp_find_regbuf_by_id(dev, &reg_buf, dev->dev_id, frame_id);
+			if (reg_buf) {
+				rkispp_release_regbuf(dev, reg_buf);
+				v4l2_info(&dev->v4l2_dev,
+					  "%s: current frame use dummy buffer(dev_id %d, sequence %d)\n",
+					  __func__, dev->dev_id, frame_id);
+			}
 		}
 	}
 
-	spin_lock_irqsave(&stream->vbq_lock, lock_flags);
-	if (!list_empty(&stream->buf_queue) && !stream->curr_buf) {
-		stream->curr_buf =
-			list_first_entry(&stream->buf_queue,
-					 struct rkispp_buffer, queue);
-		list_del(&stream->curr_buf->queue);
-	}
-	spin_unlock_irqrestore(&stream->vbq_lock, lock_flags);
-
+	get_stream_buf(stream);
 	update_mi(stream);
 	return 0;
 }
@@ -2596,9 +2610,19 @@ static void fec_work_event(struct rkispp_device *dev,
 			dev->ispp_sdev.frm_sync_seq = seq;
 		}
 
+		/* check MB config and output buf beforce start, when MB connect to FEC
+		 * MB update by FEC_FORCE_UPD
+		 */
 		stream = &vdev->stream[STREAM_MB];
-		if (stream->streaming && !stream->is_cfg)
-			secure_config_mb(stream);
+		if (stream->streaming) {
+			if (!stream->is_cfg) {
+				secure_config_mb(stream);
+			} else if (!stream->curr_buf) {
+				get_stream_buf(stream);
+				if (stream->curr_buf)
+					update_mi(stream);
+			}
+		}
 
 		if (!dev->hw_dev->is_single)
 			rkispp_update_regs(dev, RKISPP_FEC, RKISPP_FEC_CROP);
@@ -2877,9 +2901,31 @@ static void nr_work_event(struct rkispp_device *dev,
 			}
 		}
 
+		/* check MB config and output buf beforce start, when MB connect to SHARP
+		 * MB update by OTHER_FORCE_UPD
+		 */
 		stream = &vdev->stream[STREAM_MB];
-		if (!is_fec_en && stream->streaming && !stream->is_cfg)
-			secure_config_mb(stream);
+		if (!is_fec_en && stream->streaming) {
+			if (!stream->is_cfg) {
+				secure_config_mb(stream);
+			} else if (!stream->curr_buf) {
+				get_stream_buf(stream);
+				if (stream->curr_buf)
+					update_mi(stream);
+			}
+		}
+
+		/* check SCL output buf beforce start
+		 * SCL update by OTHER_FORCE_UPD
+		 */
+		for (val = STREAM_S0; val <= STREAM_S2; val++) {
+			stream = &vdev->stream[val];
+			if (!stream->streaming || !stream->is_cfg || stream->curr_buf)
+				continue;
+			get_stream_buf(stream);
+			if (stream->curr_buf)
+				update_mi(stream);
+		}
 
 		if (!dev->hw_dev->is_single) {
 			if (vdev->nr.cur_rd &&
