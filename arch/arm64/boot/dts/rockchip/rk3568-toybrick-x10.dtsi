@@ -193,6 +193,19 @@
 		regulator-always-on;
 		regulator-boot-on;
 	};
+
+	vcc_4g: vcc-4g-regulator {
+		compatible = "regulator-fixed";
+		gpio = <&gpio0 RK_PC0 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc_4g_drv>;
+		regulator-name = "vcc_4g";
+		enable-active-low;
+		regulator-always-on;
+		regulator-boot-on;
+		/*regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;*/
+	};
 };
 
 
@@ -746,6 +759,15 @@
 				<0 RK_PC1 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
+
+	4g {
+		vcc_4g_drv: vcc-4g-drv {
+			rockchip,pins =
+				<0 RK_PC0 RK_FUNC_GPIO &pcfg_output_low>,
+				<3 RK_PC5 RK_FUNC_GPIO &pcfg_output_low>,
+				<3 RK_PB2 RK_FUNC_GPIO &pcfg_output_high>;
+		};
+	};
 };
 
 &pwm7 {
@@ -840,4 +862,8 @@
 
 &sata2 {
 	status = "okay";
+};
+
+&leds {
+	status = "disabled";
 };
