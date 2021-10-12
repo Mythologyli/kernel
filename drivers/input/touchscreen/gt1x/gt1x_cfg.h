@@ -17,11 +17,11 @@
 
 #ifndef _GOODIX_GT1X_CFG_H_
 #define _GOODIX_GT1X_CFG_H_
-
+#ifndef CONFIG_TOUCHSCREEN_BEIQICLOUD_GT1X
 /* CFG for GT5688 */
 static u8 gtp_dat_5688[] = {
 	/* <1080, 1920>*/
 	#include "GT5688_Config_20170713_1080_1920.cfg"
 };
-
+#endif
 #endif /* _GOODIX_GT1X_CFG_H_ */
