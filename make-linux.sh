@@ -86,6 +86,11 @@ function make_toybrick_dtb()
 	cp ${dts_path}/*toybrick*.dtb boot_linux/extlinux/
 }
 
+function make_toybrick_logo()
+{
+    cp -f logo*.bmp boot_linux/extlinux/
+}
+
 function make_extlinux_conf_one()
 {
 	flag=$1
@@ -178,6 +183,7 @@ function make_kernel_image()
 		DEFCONFIG=${config}
 	fi
 	make_toybrick_dtb ${arch}
+    make_toybrick_logo
 }
 
 function make_boot_linux()
