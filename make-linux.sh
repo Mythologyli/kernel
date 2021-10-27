@@ -21,6 +21,7 @@ model_arm64=(
 	"TB-RK3568Xs0    TXs356 arm64 RK3568    0xff660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3568X1-C   TX031C arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3568X0-C   TX030C arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
+	"TB-RK3568X0-D   TX030D arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3399ProD   TD0331 arm64 RK3399Pro 0xff1a0000 rk3399pro-toybrick-prod-linux    0     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3399ProDs  TDs331 arm64 RK3399pro 0xff1a0000 rk3399pro-toybrick-prod-linux    0     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3399ProP   TP0331 arm64 RK3399Pro 0xff1a0000 rk3399pro-toybrick-prop-linux    0     Image.rockchip  rockchip_linux_defconfig"
@@ -84,6 +85,11 @@ function make_toybrick_dtb()
 		make -f ./scripts/Makefile.build obj=${dts_path} ${d}.dtb srctree=./ objtree=./ > /dev/null
 	done
 	cp ${dts_path}/*toybrick*.dtb boot_linux/extlinux/
+}
+
+function make_toybrick_logo()
+{
+    cp -f logo*.bmp boot_linux/extlinux/
 }
 
 function make_extlinux_conf_one()
@@ -178,6 +184,7 @@ function make_kernel_image()
 		DEFCONFIG=${config}
 	fi
 	make_toybrick_dtb ${arch}
+    make_toybrick_logo
 }
 
 function make_boot_linux()

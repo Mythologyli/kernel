@@ -29,10 +29,12 @@ static const char *input_dev_phys = "input/ts";
 #ifdef CONFIG_PM
 static const struct dev_pm_ops gt1x_ts_pm_ops;
 #endif
+
 #ifdef GTP_CONFIG_OF
 bool gt1x_gt5688;
 int gt1x_rst_gpio;
 int gt1x_int_gpio;
+int gt1x_enable_gpio;
 #endif
 
 static int gt1x_register_powermanger(void);
@@ -162,6 +164,10 @@ void gt1x_touch_down(s32 x, s32 y, s32 size, s32 id)
 {
 #if GTP_CHANGE_X2Y
 	GTP_SWAP(x, y);
+#endif
+#ifdef CONFIG_TOUCHSCREEN_BEIQICLOUD_GT1X
+	y = gt1x_abs_y_max - y;
+	x = gt1x_abs_x_max - x;
 #endif
 
 	if (gt1x_ics_slot_report) {
@@ -303,11 +309,12 @@ static int gt1x_parse_dt(struct device *dev)
 {
 	struct device_node *np;
 	const char *tp_type;
+#ifndef CONFIG_TOUCHSCREEN_BEIQICLOUD_GT1X
 #ifdef CONFIG_PM
 	struct device_node *root;
 	const char *machine_compatible;
 #endif
-
+#endif
 	if (!dev)
 		return -ENODEV;
 
@@ -322,6 +329,7 @@ static int gt1x_parse_dt(struct device *dev)
 
 	gt1x_int_gpio = of_get_named_gpio(np, "goodix,irq-gpio", 0);
 	gt1x_rst_gpio = of_get_named_gpio(np, "goodix,rst-gpio", 0);
+	gt1x_enable_gpio = of_get_named_gpio(np, "goodix,enable-gpio", 0);
 
 	if (!gpio_is_valid(gt1x_int_gpio) || !gpio_is_valid(gt1x_rst_gpio)) {
 		GTP_ERROR("Invalid GPIO, irq-gpio:%d, rst-gpio:%d",
@@ -344,6 +352,7 @@ static int gt1x_parse_dt(struct device *dev)
 	}
 
 	gt1x_ics_slot_report = of_property_read_bool(dev->of_node, "gtp_ics_slot_report");
+#ifndef CONFIG_TOUCHSCREEN_BEIQICLOUD_GT1X
 #ifdef CONFIG_PM
 	root = of_find_node_by_path("/");
 	if (root) {
@@ -353,7 +362,7 @@ static int gt1x_parse_dt(struct device *dev)
 			dev->driver->pm = &gt1x_ts_pm_ops;
 	}
 #endif
-
+#endif
 	return 0;
 }
 
@@ -388,6 +397,9 @@ static void gt1x_remove_gpio_and_power(void)
 
 	if (gpio_is_valid(gt1x_rst_gpio))
 		gpio_free(gt1x_rst_gpio);
+
+	if (gpio_is_valid(gt1x_enable_gpio))
+		gpio_free(gt1x_enable_gpio);
 
 	if (gt1x_i2c_client && gt1x_i2c_client->irq)
 		free_irq(gt1x_i2c_client->irq, gt1x_i2c_client);
@@ -537,6 +549,7 @@ static int gt1x_ts_probe(struct i2c_client *client, const struct i2c_device_id *
 	GTP_INFO("GTP Driver Version: %s", GTP_DRIVER_VERSION);
 	GTP_INFO("GTP I2C Address: 0x%02x", client->addr);
 
+	GTP_INFO("####################### ===GTP TEST 20200630 BEIQI=== ##########################");
 	gt1x_i2c_client = client;
 	spin_lock_init(&irq_lock);
 
@@ -663,6 +676,9 @@ static int gtp_fb_notifier_callback(struct notifier_block *noti, unsigned long e
 		if (*blank == FB_BLANK_UNBLANK) {
 			tp_status = *blank;
 			GTP_DEBUG("Resume by fb notifier.");
+			if (gpio_is_valid(gt1x_enable_gpio)){
+				gpio_direction_output(gt1x_enable_gpio, 1);
+			}
 			gt1x_resume();
 		}
 	}
@@ -680,6 +696,7 @@ static int gtp_fb_notifier_callback(struct notifier_block *noti, unsigned long e
 
 	return 0;
 }
+
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 /* earlysuspend module the suspend/resume procedure */
 static void gt1x_ts_early_suspend(struct early_suspend *h)
@@ -717,13 +734,13 @@ static int gt1x_pm_suspend(struct device *dev)
  */
 static int gt1x_pm_resume(struct device *dev)
 {
-	return gt1x_resume();
+       return gt1x_resume();
 }
 
 /* bus control the suspend/resume procedure */
 static const struct dev_pm_ops gt1x_ts_pm_ops = {
-	.suspend = gt1x_pm_suspend,
-	.resume = gt1x_pm_resume,
+       .suspend = gt1x_pm_suspend,
+       .resume = gt1x_pm_resume,
 };
 #endif
 
@@ -775,7 +792,9 @@ static struct i2c_driver gt1x_ts_driver = {
 #if !defined(CONFIG_FB) && defined(CONFIG_PM)
 		   .pm = &gt1x_ts_pm_ops,
 #endif
+#ifndef BEIQICOULD_GT1X
 		   .probe_type = PROBE_PREFER_ASYNCHRONOUS,
+#endif
 		   },
 };
 
@@ -802,8 +821,9 @@ static void __exit gt1x_ts_exit(void)
 	i2c_del_driver(&gt1x_ts_driver);
 }
 
-module_init(gt1x_ts_init);
-module_exit(gt1x_ts_exit);
+//module_init(gt1x_ts_init);
+//module_exit(gt1x_ts_exit);
+late_initcall(gt1x_ts_init);
 
 MODULE_DESCRIPTION("GTP Series Driver");
 MODULE_LICENSE("GPL");

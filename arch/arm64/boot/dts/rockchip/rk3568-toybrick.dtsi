@@ -257,6 +257,29 @@
 		rockchip,codec = <&rk809_codec>, <&vad>;
 	};
 
+	bt-sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,format = "dsp_b";
+		simple-audio-card,bitclock-inversion = <1>;
+		simple-audio-card,mclk-fs = <256>;
+		simple-audio-card,name = "rockchip,bt";
+		#simple-audio-card,bitclock-master = <&sound2_master>;
+		#simple-audio-card,frame-master = <&sound2_master>;
+		simple-audio-card,cpu {
+			sound-dai = <&i2s3_2ch>;
+		};
+		sound2_master:simple-audio-card,codec {
+			#sound-dai-cells = <0>;
+			sound-dai = <&bt_sco>;
+		};
+	};
+
+	bt_sco: bt-sco {
+		compatible = "delta,dfbmcs320";
+		#sound-dai-cells = <0>;
+		status = "okay";
+	};
+
 	vcc3v3_sys: vcc3v3-sys {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc3v3_sys";
@@ -356,6 +379,10 @@
 	test-power {
 		status = "okay";
 	};
+};
+
+&i2s3_2ch {
+	status = "okay";
 };
 
 &bus_npu {
@@ -1559,6 +1586,10 @@
 	vccio5-supply = <&vcc_3v3>;
 	vccio6-supply = <&vcc_1v8>;
 	vccio7-supply = <&vcc_3v3>;
+};
+
+&pwm0 {
+	status = "okay";
 };
 
 &pwm4 {

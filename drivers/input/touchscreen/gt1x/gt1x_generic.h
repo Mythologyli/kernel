@@ -44,15 +44,20 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
-
+//#define CONFIG_TOUCHSCREEN_BEIQICLOUD_GT1X
 /********* Device Tree Support *********/
 #ifdef CONFIG_OF
 #define GTP_CONFIG_OF
 #endif
 /***************************PART1:ON/OFF define*******************************/
 #define GTP_INCELL_PANEL      0
+#ifdef CONFIG_TOUCHSCREEN_BEIQICLOUD_GT1X
+#define GTP_DRIVER_SEND_CFG   0	/* send config to TP while initializing (for no config built in TP's flash) */
+#define GTP_CUSTOM_CFG        1	/* customize resolution & interrupt trigger mode */
+#else
 #define GTP_DRIVER_SEND_CFG   1	/* send config to TP while initializing (for no config built in TP's flash) */
 #define GTP_CUSTOM_CFG        0	/* customize resolution & interrupt trigger mode */
+#endif
 
 #define GTP_CHANGE_X2Y        0	/* exchange xy */
 #define GTP_WARP_X_ON         0
@@ -252,7 +257,11 @@
 #if GTP_CUSTOM_CFG
 #define GTP_MAX_HEIGHT   1280
 #define GTP_MAX_WIDTH    720
+#ifdef CONFIG_TOUCHSCREEN_BEIQICLOUD_GT1X
+#define GTP_INT_TRIGGER  0	/* 0:Rising 1:Falling */
+#else
 #define GTP_INT_TRIGGER  1	/* 0:Rising 1:Falling */
+#endif
 #define GTP_WAKEUP_LEVEL 1
 #else
 #define GTP_MAX_HEIGHT   4096
