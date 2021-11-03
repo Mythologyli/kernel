@@ -1393,10 +1393,8 @@ config TOUCHSCREEN_VTL_CT36X
 config TOUCHSCREEN_GT1X
 	tristate "GT1X touchscreens support"
 
-config TOUCHSCREEN_BEIQICLOUD_GT1X
-	depends on TOUCHSCREEN_GT1X
-	default n
-	tristate "beiqicloud GT1X touchscreens support"
+config TOUCHSCREEN_GT5688
+	tristate "GT5688 touchscreens support"
 
 config TOUCHSCREEN_FTS
 	bool "Focaltech Touchscreen"
