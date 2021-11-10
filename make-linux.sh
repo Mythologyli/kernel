@@ -17,6 +17,7 @@ ID_CONFIG=9
 model_arm64=(
 	"TB-RK3568C1-C   TC031C arm64 RK3568    0xff660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3568C0-C   TC030C arm64 RK3568    0xff660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
+	"TB-RK3568C0-D   TC030D arm64 RK3568    0xff660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3568X0     TX0356 arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3568Xs0    TXs356 arm64 RK3568    0xff660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3568X1-C   TX031C arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
