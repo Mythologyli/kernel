@@ -52,12 +52,9 @@
 	status = "okay";
 };
 
-&dsi1 {
-	status = "disabled";
-};
-
-&edp {
-	status = "disabled";
+&route_dsi0 {
+	status = "okay";
+	connect = <&vp1_out_dsi0>;
 };
 
 &dsi0_in_vp0 {

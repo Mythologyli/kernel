@@ -100,6 +100,10 @@
 
 };
 
+&route_edp {
+	status = "okay";
+};
+
 &edp_phy {
 	status = "okay";
 };
@@ -114,14 +118,6 @@
 
 &edp_panel {
 	power-supply = <&vcc3v3_lcd0_n>;
-};
-
-&dsi0 {
-	status = "diabled";
-};
-
-&dsi1 {
-	status = "diabled";
 };
 
 &i2c1 {

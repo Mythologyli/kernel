@@ -339,10 +339,6 @@
 	status = "disabled";
 };
 
-&edp {
-	status = "disabled";
-};
-
 &dsi0_in_vp0 {
 	status = "disabled";
 };
@@ -369,7 +365,7 @@
 };
 
 &route_dsi0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &pinctrl {
