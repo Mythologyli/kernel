@@ -100,6 +100,7 @@ function make_extlinux_conf_one()
 	dtb_name=$3
 	image=$4
 	fs=$5
+	uart=$6
 	
 	file_path=boot_linux/extlinux
 
@@ -148,7 +149,8 @@ function make_extlinux_conf_legacy()
 	fs=${!ID_FS}
 	dtb_name=${!ID_DTB}
 	image=${!ID_IMAGE}
-	make_extlinux_conf_one none -1 ${dtb_name} ${image} ${fs}
+	uart=${!ID_UART}
+	make_extlinux_conf_one none -1 ${dtb_name} ${image} ${fs} ${uart}
 }
 
 function make_extlinux_conf()
@@ -159,13 +161,14 @@ function make_extlinux_conf()
 	image=${!ID_IMAGE}
 	multi=${!ID_MULTI}
 	flag=${!ID_FLAG}
+	uart=${!ID_UART}
 
-	make_extlinux_conf_one ${flag} -1 ${dtb_name} ${image} ${fs}
+	make_extlinux_conf_one ${flag} -1 ${dtb_name} ${image} ${fs} ${uart}
 	if [ ${multi} -eq 1 ]; then
 		for i in $(seq 0 ${MAX_BOARDID})
 		do
 			if [ -f boot_linux/extlinux/${dtb_name}-x$i.dtb ]; then
-				make_extlinux_conf_one ${flag} $i ${dtb_name} ${image} ${fs}
+				make_extlinux_conf_one ${flag} $i ${dtb_name} ${image} ${fs} ${uart}
 			fi
 		done
 	fi
