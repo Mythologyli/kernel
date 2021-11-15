@@ -324,6 +324,7 @@
 
 	gt1x: gt1x@14 {
 		compatible = "goodix,gt1x";
+		status = "okay";
 		reg = <0x5d>;
 		pinctrl-names = "default";
 		power-supply = <&vcc3v3_lcd0_n>;
