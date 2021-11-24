@@ -78,7 +78,7 @@ static int fcc_xysubs(u32 fcc, u32 *xsubs, u32 *ysubs)
 }
 
 static const struct cif_output_fmt out_fmts[] = {
-	{
+	/*{
 		.fourcc = V4L2_PIX_FMT_NV16,
 		.cplanes = 2,
 		.mplanes = 1,
@@ -94,7 +94,7 @@ static const struct cif_output_fmt out_fmts[] = {
 		.bpp = { 8, 16 },
 		.csi_fmt_val = CSI_WRDDR_TYPE_YUV422,
 		.fmt_type = CIF_FMT_TYPE_YUV,
-	}, {
+	}, */{
 		.fourcc = V4L2_PIX_FMT_NV12,
 		.fmt_val = YUV_OUTPUT_420 | UV_STORAGE_ORDER_UVUV,
 		.cplanes = 2,
@@ -102,7 +102,7 @@ static const struct cif_output_fmt out_fmts[] = {
 		.bpp = { 8, 16 },
 		.csi_fmt_val = CSI_WRDDR_TYPE_YUV420SP,
 		.fmt_type = CIF_FMT_TYPE_YUV,
-	}, {
+	}/*, {
 		.fourcc = V4L2_PIX_FMT_NV21,
 		.fmt_val = YUV_OUTPUT_420 | UV_STORAGE_ORDER_VUVU,
 		.cplanes = 2,
@@ -151,7 +151,7 @@ static const struct cif_output_fmt out_fmts[] = {
 		.mplanes = 1,
 		.bpp = { 16 },
 		.fmt_type = CIF_FMT_TYPE_RAW,
-	}, {
+	}*/, {
 		.fourcc = V4L2_PIX_FMT_BGR666,
 		.cplanes = 1,
 		.mplanes = 1,
@@ -294,7 +294,6 @@ static const struct cif_output_fmt out_fmts[] = {
 		.csi_fmt_val	= CSI_WRDDR_TYPE_RAW8,
 		.fmt_type = CIF_FMT_TYPE_RAW,
 	}
-
 	/* TODO: We can support NV12M/NV21M/NV16M/NV61M too */
 };
 

@@ -740,7 +740,7 @@ static int rockchip_spi_setup(struct spi_device *spi)
 
 	writel_relaxed(cr0, rs->regs + ROCKCHIP_SPI_CTRLR0);
 
-	pm_runtime_put(rs->dev);
+	spi_controller_put(spi->controller);
 
 	if (spi->cs_gpio == -ENOENT)
 		return 0;

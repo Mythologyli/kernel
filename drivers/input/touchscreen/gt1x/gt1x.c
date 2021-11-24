@@ -163,7 +163,10 @@ void gt1x_touch_down(s32 x, s32 y, s32 size, s32 id)
 #if GTP_CHANGE_X2Y
 	GTP_SWAP(x, y);
 #endif
-
+	if (gt1x_gt5688) {
+		y = gt1x_abs_y_max - y;
+		x = gt1x_abs_x_max - x;
+	}
 	if (gt1x_ics_slot_report) {
 		input_mt_slot(input_dev, id);
 		input_report_abs(input_dev, ABS_MT_PRESSURE, size);
