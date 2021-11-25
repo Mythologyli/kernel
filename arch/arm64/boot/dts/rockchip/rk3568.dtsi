@@ -148,7 +148,7 @@
 			/* MHz    MHz    uV */
 			   0      1608   75000
 		>;
-
+#if 0
 		opp-408000000 {
 			opp-hz = /bits/ 64 <408000000>;
 			opp-microvolt = <825000 825000 1150000>;
@@ -185,6 +185,7 @@
 			opp-microvolt = <1050000 1050000 1150000>;
 			clock-latency-ns = <40000>;
 		};
+#endif
 		opp-1992000000 {
 			opp-hz = /bits/ 64 <1992000000>;
 			opp-microvolt = <1150000 1150000 1150000>;
