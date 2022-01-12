@@ -1,6 +1,8 @@
 #!/bin/bash
 
 CPUs=`sed -n "N;/processor/p" /proc/cpuinfo|wc -l`
+INITRD=0
+INITRD_NAME=initramfs.img
 DEFCONFIG=
 #########################################################################################################################################
 #        model           flag    arch  chip      uart       dtb                           multi  image           defconfig		
@@ -15,13 +17,14 @@ ID_MULTI=7
 ID_IMAGE=8
 ID_CONFIG=9
 model_arm64=(
-	"TB-RK3568C1-C   TC031C arm64 RK3568    0xff660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
-	"TB-RK3568C0-C   TC030C arm64 RK3568    0xff660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
-	"TB-RK3568X0     TX0356 arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
-	"TB-RK3568Xs0    TXs356 arm64 RK3568    0xff660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
-	"TB-RK3568X1-C   TX031C arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
-	"TB-RK3568X0-C   TX030C arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
-	"TB-RK3568X0-D   TX030D arm64 RK3568    0xff660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
+	"TB-RK3568C1-C   TC031C arm64 RK3568    0xfe660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
+	"TB-RK3568C0-C   TC030C arm64 RK3568    0xfe660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
+	"TB-RK3568C0-D   TC030D arm64 RK3568    0xfe660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
+	"TB-RK3568X0     TX0356 arm64 RK3568    0xfe660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
+	"TB-RK3568Xs0    TXs356 arm64 RK3568    0xfe660000 rk3568-toybrick-core-linux       1     Image.rockchip  rockchip_linux_defconfig"
+	"TB-RK3568X1-C   TX031C arm64 RK3568    0xfe660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
+	"TB-RK3568X0-C   TX030C arm64 RK3568    0xfe660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
+	"TB-RK3568X0-D   TX030D arm64 RK3568    0xfe660000 rk3568-toybrick-core-linux-x0    0     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3399ProD   TD0331 arm64 RK3399Pro 0xff1a0000 rk3399pro-toybrick-prod-linux    0     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3399ProDs  TDs331 arm64 RK3399pro 0xff1a0000 rk3399pro-toybrick-prod-linux    0     Image.rockchip  rockchip_linux_defconfig"
 	"TB-RK3399ProP   TP0331 arm64 RK3399Pro 0xff1a0000 rk3399pro-toybrick-prop-linux    0     Image.rockchip  rockchip_linux_defconfig"
@@ -99,6 +102,7 @@ function make_extlinux_conf_one()
 	dtb_name=$3
 	image=$4
 	fs=$5
+	uart=$6
 	
 	file_path=boot_linux/extlinux
 
@@ -129,7 +133,11 @@ function make_extlinux_conf_one()
 	echo "	fdt /extlinux/${dst_dtb_file}" >> ${conf_file}
 	case ${fs} in
 	ext4)
+	if [ ${INITRD} -eq 1 ]; then
+		echo "	append earlycon=uart8250,mmio32,${uart} initrd=/${INITRD_NAME} root=PARTUUID=614e0000-0000-4b53-8000-1d28000054a9 rw rootwait rootfstype=ext4" >> ${conf_file}
+	else
 		echo "	append earlycon=uart8250,mmio32,${uart} root=PARTUUID=614e0000-0000-4b53-8000-1d28000054a9 rw rootwait rootfstype=ext4" >> ${conf_file}
+	fi
 		;;
 	ubifs)
 		echo "	append earlycon=uart8250,mmio32,${uart} printk.time=1 ubi.mtd=3 root=ubi0.rootfs rw rootwait rootfstype=ubifs initcall_debug=1" >> ${conf_file}
@@ -147,7 +155,8 @@ function make_extlinux_conf_legacy()
 	fs=${!ID_FS}
 	dtb_name=${!ID_DTB}
 	image=${!ID_IMAGE}
-	make_extlinux_conf_one none -1 ${dtb_name} ${image} ${fs}
+	uart=${!ID_UART}
+	make_extlinux_conf_one none -1 ${dtb_name} ${image} ${fs} ${uart}
 }
 
 function make_extlinux_conf()
@@ -158,13 +167,14 @@ function make_extlinux_conf()
 	image=${!ID_IMAGE}
 	multi=${!ID_MULTI}
 	flag=${!ID_FLAG}
+	uart=${!ID_UART}
 
-	make_extlinux_conf_one ${flag} -1 ${dtb_name} ${image} ${fs}
+	make_extlinux_conf_one ${flag} -1 ${dtb_name} ${image} ${fs} ${uart}
 	if [ ${multi} -eq 1 ]; then
 		for i in $(seq 0 ${MAX_BOARDID})
 		do
 			if [ -f boot_linux/extlinux/${dtb_name}-x$i.dtb ]; then
-				make_extlinux_conf_one ${flag} $i ${dtb_name} ${image} ${fs}
+				make_extlinux_conf_one ${flag} $i ${dtb_name} ${image} ${fs} ${uart}
 			fi
 		done
 	fi
@@ -198,8 +208,8 @@ function make_boot_linux()
 	blocks=${BLOCKS}
 	block_size=$((${size_m} * 1024 * 1024 / ${blocks}))
 
-	if [ "`uname -i`" == "aarch64" ]; then
-		echo y | mke2fs -b ${block_size} -d boot_linux -i 8192 -t ext2 boot_linux.img ${blocks}
+	if [ "`uname -m`" == "aarch64" ]; then
+		echo y | sudo mke2fs -b ${block_size} -d boot_linux -i 8192 -t ext2 boot_linux.img ${blocks}
 	else
 		genext2fs -B ${blocks} -b ${block_size} -d boot_linux -i 8192 -U boot_linux.img
 	fi
@@ -207,6 +217,7 @@ function make_boot_linux()
 
 rm -rf boot_linux
 mkdir -p boot_linux/extlinux
+cp initramfs.img boot_linux/
 touch boot_linux/extlinux/extlinux.conf
 case $1 in
 	arm)

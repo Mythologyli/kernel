@@ -324,10 +324,12 @@
 
 	gt1x: gt1x@14 {
 		compatible = "goodix,gt1x";
+		status = "okay";
 		reg = <0x5d>;
 		pinctrl-names = "default";
 		power-supply = <&vcc3v3_lcd0_n>;
 		pinctrl-0 = <&touch_gpio>;
+		goodix,ic_type = "gt5688";
 		goodix,enable-gpio = <&gpio3 RK_PB5 GPIO_ACTIVE_HIGH>;
 		goodix,rst-gpio = <&gpio0 RK_PB6 GPIO_ACTIVE_HIGH>;
 		goodix,irq-gpio = <&gpio0 RK_PB5 IRQ_TYPE_LEVEL_LOW>;
@@ -335,10 +337,6 @@
 };
 
 &dsi1 {
-	status = "disabled";
-};
-
-&edp {
 	status = "disabled";
 };
 
@@ -368,7 +366,7 @@
 };
 
 &route_dsi0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &pinctrl {

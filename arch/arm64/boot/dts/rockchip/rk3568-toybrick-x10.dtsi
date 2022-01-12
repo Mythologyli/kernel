@@ -157,7 +157,7 @@
 	};
 
 	rk809_sound_micarray: rk809-sound-micarray {
-		status = "okay";
+		status = "disabled";
 		compatible = "simple-audio-card";
 		simple-audio-card,format = "i2s";
 		simple-audio-card,name = "rockchip,rk809-codec";
@@ -249,7 +249,7 @@
 };
 #endif
 &rk809_sound {
-	status = "disabled";
+	status = "okay";
 };
 
 &combphy0_us {
@@ -262,46 +262,6 @@
 
 &combphy2_psq {
 	status = "okay";
-};
-
-/*
- * mipi_dphy0 needs to be enabled
- * when dsi0 is enabled
- */
-&dsi0 {
-	status = "okay";
-};
-
-&dsi0_in_vp0 {
-	status = "disabled";
-};
-
-&dsi0_in_vp1 {
-	status = "okay";
-};
-
-&dsi0_panel {
-	power-supply = <&vcc3v3_lcd0_n>;
-};
-
-/*
- * mipi_dphy1 needs to be enabled
- * when dsi1 is enabled
- */
-&dsi1 {
-	status = "disabled";
-};
-
-&dsi1_in_vp0 {
-	status = "disabled";
-};
-
-&dsi1_in_vp1 {
-	status = "disabled";
-};
-
-&dsi1_panel {
-	power-supply = <&vcc3v3_lcd1_n>;
 };
 
 &gmac0 {
@@ -356,14 +316,6 @@
 
 	phy-handle = <&rgmii_phy1>;
 	status = "okay";
-};
-
-/*
- * power-supply should switche to vcc3v3_lcd1_n
- * when mipi panel is connected to dsi1.
- */
-&gt1x {
-	power-supply = <&vcc3v3_lcd0_n>;
 };
 
 &i2c3 {
@@ -772,11 +724,6 @@
 
 &pwm7 {
 	status = "okay";
-};
-
-&route_dsi0 {
-	status = "okay";
-	connect = <&vp1_out_dsi0>;
 };
 
 &sdio_pwrseq {

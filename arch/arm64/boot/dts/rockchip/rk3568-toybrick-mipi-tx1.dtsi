@@ -44,10 +44,6 @@
 	compatible = "rockchip,rk3568-toybrick-mipi-tx1", "rockchip,rk3568";
 };
 
-&dsi0 {
-	status = "disabled";
-};
-
 /*
  * mipi_dphy1 needs to be enabled
  * when dsi1 is enabled
@@ -56,8 +52,9 @@
 	status = "okay";
 };
 
-&edp {
-	status = "disabled";
+&route_dsi1 {
+	status = "okay";
+	connect = <&vp1_out_dsi1>;
 };
 
 &dsi1_in_vp0 {

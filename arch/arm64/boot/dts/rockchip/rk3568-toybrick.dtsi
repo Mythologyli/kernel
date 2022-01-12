@@ -1410,6 +1410,7 @@
 
 	gt1x: gt1x@14 {
 		compatible = "goodix,gt1x";
+		status = "disabled";
 		reg = <0x14>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&touch_gpio>;
