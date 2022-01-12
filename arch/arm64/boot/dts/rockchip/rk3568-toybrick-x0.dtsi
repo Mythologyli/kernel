@@ -157,7 +157,7 @@
 	};
 
 	rk809_sound_micarray: rk809-sound-micarray {
-		status = "okay";
+		status = "disabled";
 		compatible = "simple-audio-card";
 		simple-audio-card,format = "i2s";
 		simple-audio-card,name = "rockchip,rk809-codec";
@@ -236,7 +236,7 @@
 };
 #endif
 &rk809_sound {
-	status = "disabled";
+	status = "okay";
 };
 
 &combphy0_us {
